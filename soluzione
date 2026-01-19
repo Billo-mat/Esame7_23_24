@@ -1,0 +1,158 @@
+import pandas as pd
+import math
+import numpy as np
+import matplotlib.pyplot as plt
+
+# 1. Carichiamo il dataset
+# Assicurati che il file EPE.csv sia nella stessa cartella dello script
+df_epe = pd.read_csv('EPE.csv')
+
+# 2. Definiamo il dizionario per la mappatura delle specie
+# Estraiamo il numero prima del trattino '-' dalla colonna 'Image'
+species_map = {
+    '1': 'Anas platyrhynchos domesticus',
+    '2': 'Anser cygnoides domesticus',
+    '3': 'Coturnix japonica domesticus',
+    '4': 'Gallus gallus domesticus',
+    '5': 'Alectoris chukar domesticus',
+    '7': 'Phasianus colchicus domesticus'
+}
+
+# 3. Creiamo una nuova colonna 'Species'
+# Usiamo .str.split('-').str[0] per prendere il numero prima del trattino
+df_epe['Species_Code'] = df_epe['Image'].str.split('-').str[0]
+df_epe['Species'] = df_epe['Species_Code'].map(species_map)
+
+# Visualizziamo le prime righe per verificare
+print(df_epe[['Image', 'Species', 'scan.length', 'Albumen']].head())
+
+def ellipsoid_volume(a: float, b: float, c: float) -> float:
+    """
+    Calcola il volume di un ellissoide dati i tre semiassi a, b, c.
+    La formula utilizzata è (4/3) * pi * a * b * c.
+
+    >>> round(ellipsoid_volume(3, 4, 5), 2)
+    251.33
+    """
+    volume = (4/3) * math.pi * a * b * c
+    return volume
+
+# Esempio di utilizzo:
+# v = ellipsoid_volume(3.0, 4.0, 5.0)
+# print(v)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
+
+# Calcoliamo x invertendo la formula dell'area:
+# x = (scan.area * 4) / (pi * scan.width)
+
+df_epe['x'] = (df_epe['scan.area'] * 4) / (np.pi * df_epe['scan.width'])
+
+# Visualizziamo le prime righe per verificare il calcolo
+print(df_epe[['scan.area', 'scan.width', 'x']].head())
+
+axes_cols = ['scan.width', 'scan.length', 'x']
+df_epe['longest_axis'] = df_epe[axes_cols].max(axis=1)
+
+# Visualizziamo le colonne interessate per le prime righe
+print(df_epe[['scan.length', 'scan.width', 'x', 'longest_axis']].head())
+
+# 3. Creazione del grafico
+plt.figure(figsize=(12, 7))
+
+# Iteriamo su ogni specie unica per creare istogrammi sovrapposti
+for species_name in df_epe['Species'].unique():
+    # Escludiamo eventuali valori nulli per la colonna scan.area
+    subset = df_epe[df_epe['Species'] == species_name].dropna(subset=['scan.area'])
+    
+    plt.hist(subset['scan.area'], 
+             bins=25, 
+             alpha=0.5,           # Trasparenza per rendere visibili le sovrapposizioni
+             label=species_name)
+
+# 4. Formattazione del grafico
+plt.xlabel('Scan Area ($cm^2$)', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+plt.title('Distribution of scan.area by Poultry Species', fontsize=14)
+
+# Posizioniamo la legenda all'esterno per non coprire i dati
+plt.legend(title='Species', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(axis='y', linestyle='--', alpha=0.3)
+
+# Ottimizzazione dello spazio e salvataggio
+plt.tight_layout()
+plt.show()
+
+df_epe['volume'] = ellipsoid_volume(
+    df_epe['scan.length'] / 2, 
+    df_epe['scan.width'] / 2, 
+    df_epe['x'] / 2
+)
+
+# 5. Calcolo della somma di Tuorlo e Albume
+df_epe['yolk_albumen_sum'] = df_epe['Yolk'] + df_epe['Albumen']
+
+plt.figure(figsize=(10, 6))
+
+for spec in df_epe['Species'].unique():
+    subset = df_epe[df_epe['Species'] == spec]
+    plt.scatter(subset['volume'], subset['yolk_albumen_sum'], label=spec, alpha=0.6)
+
+plt.xlabel('Egg Volume ($cm^3$)')
+plt.ylabel('Yolk + Albumen Mass (g)')
+plt.title('Egg Volume vs. Internal Content Mass')
+plt.legend(title='Species', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+
+plt.show()
+
+import pymc as pm
+import arviz as az
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+
+
+
+# Filtriamo per considerare solo i punti che hanno ENTRAMBI i valori (no NaN)
+# Questo risponde alla richiesta "considering only data points with both yolk and albumen"
+data_model = df_epe.dropna(subset=['Albumen', 'Yolk', 'volume'])
+
+# Variabili per il modello
+V = data_model['volume'].values
+M_obs = data_model['yolk_albumen_sum'].values
+
+# 2. Definizione del modello PyMC
+with pm.Model() as poultry_model:
+    # Priors (Distribuzioni a priori secondo traccia)
+    # alpha ~ N(0, 3)
+    alpha = pm.Normal('alpha', mu=0, sigma=3)
+    
+    # beta ~ N(0, 3)
+    beta = pm.Normal('beta', mu=0, sigma=3)
+    
+    # gamma ~ Exp(lambda=1)
+    gamma = pm.Exponential('gamma', lam=1)
+    
+    # Deterministic: Mean (mu) = alpha + beta * V
+    mu = alpha + beta * V
+    
+    # Likelihood: M_obs ~ N(mu, gamma)
+    y = pm.Normal('y', mu=mu, sigma=gamma, observed=M_obs)
+    
+    # 3. Campionamento
+    trace = pm.sample(1000, tune=1000, return_inferencedata=True)
+
+# 4. Visualizzazione dei risultati
+az.plot_posterior(trace, var_names=['alpha', 'beta', 'gamma'])
+plt.title('Posterior Distributions for Egg Model')
+plt.savefig('egg_model_posteriors.png')
+plt.show()
+
+# Riassunto statistico
+print(az.summary(trace))
+
+
