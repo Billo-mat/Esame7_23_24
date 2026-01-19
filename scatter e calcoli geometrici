@@ -1,0 +1,24 @@
+
+df_epe['volume'] = ellipsoid_volume(
+    df_epe['scan.length'] / 2, 
+    df_epe['scan.width'] / 2, 
+    df_epe['x'] / 2
+)
+
+# 5. Calcolo della somma di Tuorlo e Albume
+df_epe['yolk_albumen_sum'] = df_epe['Yolk'] + df_epe['Albumen']
+
+plt.figure(figsize=(10, 6))
+
+for spec in df_epe['Species'].unique():
+    subset = df_epe[df_epe['Species'] == spec]
+    plt.scatter(subset['volume'], subset['yolk_albumen_sum'], label=spec, alpha=0.6)
+
+plt.xlabel('Egg Volume ($cm^3$)')
+plt.ylabel('Yolk + Albumen Mass (g)')
+plt.title('Egg Volume vs. Internal Content Mass')
+plt.legend(title='Species', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(True, linestyle='--', alpha=0.5)
+plt.tight_layout()
+
+plt.show()
