@@ -1,0 +1,18 @@
+def ellipsoid_volume(a: float, b: float, c: float) -> float:
+    """
+    Calcola il volume di un ellissoide dati i tre semiassi a, b, c.
+    La formula utilizzata è (4/3) * pi * a * b * c.
+
+    >>> round(ellipsoid_volume(3, 4, 5), 2)
+    251.33
+    """
+    volume = (4/3) * math.pi * a * b * c
+    return volume
+
+# Esempio di utilizzo:
+# v = ellipsoid_volume(3.0, 4.0, 5.0)
+# print(v)
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()
