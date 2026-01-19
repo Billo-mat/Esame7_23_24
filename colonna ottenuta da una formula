@@ -1,0 +1,7 @@
+# Calcoliamo x invertendo la formula dell'area:
+# x = (scan.area * 4) / (pi * scan.width)
+
+df_epe['x'] = (df_epe['scan.area'] * 4) / (np.pi * df_epe['scan.width'])
+
+# Visualizziamo le prime righe per verificare il calcolo
+print(df_epe[['scan.area', 'scan.width', 'x']].head())
