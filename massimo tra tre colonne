@@ -1,0 +1,5 @@
+axes_cols = ['scan.width', 'scan.length', 'x']
+df_epe['longest_axis'] = df_epe[axes_cols].max(axis=1)
+
+# Visualizziamo le colonne interessate per le prime righe
+print(df_epe[['scan.length', 'scan.width', 'x', 'longest_axis']].head())
