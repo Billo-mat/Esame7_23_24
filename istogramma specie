@@ -1,0 +1,26 @@
+
+# 3. Creazione del grafico
+plt.figure(figsize=(12, 7))
+
+# Iteriamo su ogni specie unica per creare istogrammi sovrapposti
+for species_name in df_epe['Species'].unique():
+    # Escludiamo eventuali valori nulli per la colonna scan.area
+    subset = df_epe[df_epe['Species'] == species_name].dropna(subset=['scan.area'])
+    
+    plt.hist(subset['scan.area'], 
+             bins=25, 
+             alpha=0.5,           # Trasparenza per rendere visibili le sovrapposizioni
+             label=species_name)
+
+# 4. Formattazione del grafico
+plt.xlabel('Scan Area ($cm^2$)', fontsize=12)
+plt.ylabel('Frequency', fontsize=12)
+plt.title('Distribution of scan.area by Poultry Species', fontsize=14)
+
+# Posizioniamo la legenda all'esterno per non coprire i dati
+plt.legend(title='Species', bbox_to_anchor=(1.05, 1), loc='upper left')
+plt.grid(axis='y', linestyle='--', alpha=0.3)
+
+# Ottimizzazione dello spazio e salvataggio
+plt.tight_layout()
+plt.show()
