@@ -1,0 +1,28 @@
+import pandas as pd
+
+# 1. Carichiamo il dataset
+# Assicurati che il file EPE.csv sia nella stessa cartella dello script
+df_epe = pd.read_csv('EPE.csv')
+
+# 2. Definiamo il dizionario per la mappatura delle specie
+# Estraiamo il numero prima del trattino '-' dalla colonna 'Image'
+species_map = {
+    '1': 'Anas platyrhynchos domesticus',
+    '2': 'Anser cygnoides domesticus',
+    '3': 'Coturnix japonica domesticus',
+    '4': 'Gallus gallus domesticus',
+    '5': 'Alectoris chukar domesticus',
+    '7': 'Phasianus colchicus domesticus'
+}
+
+# 3. Creiamo una nuova colonna 'Species'
+# Usiamo .str.split('-').str[0] per prendere il numero prima del trattino
+df_epe['Species_Code'] = df_epe['Image'].str.split('-').str[0]
+df_epe['Species'] = df_epe['Species_Code'].map(species_map)
+
+# Visualizziamo le prime righe per verificare
+print(df_epe[['Image', 'Species', 'scan.length', 'Albumen']].head())
+
+# Verifica rapida dei dati caricati
+print(f"\nNumero totale di uova: {len(df_epe)}")
+print(f"Specie trovate: {df_epe['Species'].unique()}")
