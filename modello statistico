@@ -1,0 +1,40 @@
+
+# Filtriamo per considerare solo i punti che hanno ENTRAMBI i valori (no NaN)
+# Questo risponde alla richiesta "considering only data points with both yolk and albumen"
+data_model = df_epe.dropna(subset=['Albumen', 'Yolk', 'volume'])
+
+# Variabili per il modello
+V = data_model['volume'].values
+M_obs = data_model['yolk_albumen_sum'].values
+
+# 2. Definizione del modello PyMC
+with pm.Model() as poultry_model:
+    # Priors (Distribuzioni a priori secondo traccia)
+    # alpha ~ N(0, 3)
+    alpha = pm.Normal('alpha', mu=0, sigma=3)
+    
+    # beta ~ N(0, 3)
+    beta = pm.Normal('beta', mu=0, sigma=3)
+    
+    # gamma ~ Exp(lambda=1)
+    gamma = pm.Exponential('gamma', lam=1)
+    
+    # Deterministic: Mean (mu) = alpha + beta * V
+    mu = alpha + beta * V
+    
+    # Likelihood: M_obs ~ N(mu, gamma)
+    y = pm.Normal('y', mu=mu, sigma=gamma, observed=M_obs)
+    
+    # 3. Campionamento
+    trace = pm.sample(1000, tune=1000, return_inferencedata=True)
+
+# 4. Visualizzazione dei risultati
+az.plot_posterior(trace, var_names=['alpha', 'beta', 'gamma'])
+plt.title('Posterior Distributions for Egg Model')
+plt.savefig('egg_model_posteriors.png')
+plt.show()
+
+# Riassunto statistico
+print(az.summary(trace))
+
+
